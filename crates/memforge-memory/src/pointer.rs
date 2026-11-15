@@ -1,7 +1,7 @@
 //! Views into a page: checked ranges of its bytes, which cannot outlive the page.
 
 use crate::allocation::AlignedPage;
-use crate::layout::PAGE_SIZE;
+use crate::layout::{PAGE_ALIGN, PAGE_SIZE};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
@@ -71,6 +71,16 @@ impl PageViewMut<'_> {
     }
 }
 
+/// The first byte of the page that the byte at `p` belongs to: `p`'s address, rounded
+/// down to a multiple of PAGE_ALIGN.
+///
+/// Only the address changes: `map_addr` keeps `p`'s provenance. So the result reaches only
+/// as far as `p` did: a pointer from `AlignedPage::as_ptr` reaches the whole page, and a
+/// pointer from a slice reaches only that slice.
+pub fn page_start(p: *const u8) -> *const u8 {
+    p.map_addr(|addr| addr & !(PAGE_ALIGN - 1))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,5 +105,24 @@ mod tests {
     fn huge_offsets_are_refused_not_wrapped_around() {
         let page = AlignedPage::allocate();
         assert_eq!(page.view().bytes(usize::MAX, 2), None);
+    }
+
+    #[test]
+    fn page_start_finds_the_page_from_any_byte_in_it() {
+        let page = AlignedPage::allocate();
+        for offset in [0, 1, 1234, PAGE_SIZE - 1] {
+            let byte = page.as_ptr().wrapping_add(offset);
+            assert_eq!(page_start(byte), page.as_ptr(), "offset {offset}");
+        }
+    }
+
+    #[test]
+    fn page_start_keeps_the_permission_to_read() {
+        let mut page = AlignedPage::allocate();
+        page.as_bytes_mut()[0] = 42;
+        let record = page.as_ptr().wrapping_add(1234);
+        // SAFETY: record comes from the page's own pointer, which may reach the whole
+        // page; page_start keeps that permission, and the page is alive and unchanged.
+        assert_eq!(unsafe { page_start(record).read() }, 42);
     }
 }
