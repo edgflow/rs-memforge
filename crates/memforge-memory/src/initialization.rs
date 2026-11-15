@@ -77,3 +77,61 @@ impl<T, const N: usize> Drop for Batch<T, N> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+
+    /// Counts its own drops in a shared cell.
+    struct Counted<'a>(&'a Cell<usize>);
+
+    impl Drop for Counted<'_> {
+        fn drop(&mut self) {
+            self.0.set(self.0.get() + 1);
+        }
+    }
+
+    #[test]
+    fn every_value_is_dropped_exactly_once() {
+        let drops = Cell::new(0);
+        let mut batch: Batch<Counted, 8> = Batch::new();
+        for _ in 0..8 {
+            assert!(batch.push(Counted(&drops)).is_ok());
+        }
+        drop(batch);
+        assert_eq!(drops.get(), 8);
+    }
+
+    #[test]
+    fn a_partly_filled_batch_drops_only_what_was_written() {
+        let drops = Cell::new(0);
+        let mut batch: Batch<Counted, 8> = Batch::new();
+        for _ in 0..3 {
+            assert!(batch.push(Counted(&drops)).is_ok());
+        }
+        drop(batch);
+        assert_eq!(drops.get(), 3);
+    }
+
+    #[test]
+    fn a_full_batch_hands_the_value_back() {
+        let mut batch: Batch<u32, 2> = Batch::new();
+        assert_eq!(batch.push(1), Ok(()));
+        assert_eq!(batch.push(2), Ok(()));
+        assert_eq!(batch.push(3), Err(3));
+        assert_eq!(batch.get(2), None);
+    }
+
+    #[test]
+    fn a_popped_value_is_dropped_once_by_its_new_owner() {
+        let drops = Cell::new(0);
+        let mut batch: Batch<Counted, 4> = Batch::new();
+        assert!(batch.push(Counted(&drops)).is_ok());
+        let popped = batch.pop();
+        drop(batch);
+        assert_eq!(drops.get(), 0, "the batch must not drop what it handed over");
+        drop(popped);
+        assert_eq!(drops.get(), 1);
+    }
+}
