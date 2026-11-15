@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod database;
+pub mod datafile;
 pub mod entry;
 pub mod index;
 
