@@ -70,3 +70,30 @@ impl PageViewMut<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn written_bytes_read_back() {
+        let mut page = AlignedPage::allocate();
+        assert_eq!(page.view_mut().write(100, b"value"), Ok(()));
+        assert_eq!(page.view().bytes(100, 5), Some(&b"value"[..]));
+    }
+
+    #[test]
+    fn the_last_byte_is_in_and_one_more_is_out() {
+        let mut page = AlignedPage::allocate();
+        assert_eq!(page.view_mut().write(PAGE_SIZE - 1, b"x"), Ok(()));
+        let past = page.view_mut().write(PAGE_SIZE, b"x");
+        assert_eq!(past, Err(OutOfPage { offset: PAGE_SIZE, len: 1 }));
+        assert_eq!(page.view().bytes(PAGE_SIZE - 1, 2), None);
+    }
+
+    #[test]
+    fn huge_offsets_are_refused_not_wrapped_around() {
+        let page = AlignedPage::allocate();
+        assert_eq!(page.view().bytes(usize::MAX, 2), None);
+    }
+}
