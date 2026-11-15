@@ -35,6 +35,13 @@ fn main() {
             let byte = unsafe { start.read() };
             println!("first byte: {byte:#x}, same as the page: {}", start == a.as_ptr());
         }
-        _ => eprintln!("usage: ch8_provenance same-address|int-cast|map-addr"),
+        "from-slice" => {
+            let key = &a.as_bytes()[1234..1243];
+            let start = key.as_ptr().map_addr(|addr| addr & !(PAGE_SIZE - 1));
+            // SAFETY: none. key's pointer may reach its 9 bytes, not the whole page.
+            let byte = unsafe { start.read() };
+            println!("{byte}");
+        }
+        _ => eprintln!("usage: ch8_provenance same-address|int-cast|map-addr|from-slice"),
     }
 }
