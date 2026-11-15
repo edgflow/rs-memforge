@@ -4,7 +4,7 @@ use crate::layout::{PAGE_ALIGN, PAGE_SIZE};
 use std::alloc::{self, Layout};
 use std::ptr::NonNull;
 
-/// PAGE_SIZE bytes, starting at a multiple of PAGE_ALIGN.
+/// PAGE_SIZE bytes, starting at a multiple of PAGE_ALIGN. Every byte always holds a value.
 pub struct AlignedPage {
     ptr: NonNull<u8>,
 }
@@ -16,11 +16,12 @@ impl AlignedPage {
             .expect("PAGE_ALIGN is a power of two")
     }
 
-    /// Allocates a page. If the allocator has no memory left, the program stops.
+    /// Allocates a page with every byte set to zero. If the allocator has no memory left,
+    /// the program stops.
     pub fn allocate() -> Self {
         let layout = Self::layout();
         // SAFETY: the layout's size, PAGE_SIZE, is not zero.
-        let raw = unsafe { alloc::alloc(layout) };
+        let raw = unsafe { alloc::alloc_zeroed(layout) };
         let ptr = NonNull::new(raw).unwrap_or_else(|| alloc::handle_alloc_error(layout));
         Self { ptr }
     }
@@ -29,11 +30,18 @@ impl AlignedPage {
     pub fn as_ptr(&self) -> *const u8 {
         self.ptr.as_ptr()
     }
+
+    /// Sets every byte of the page to `byte`.
+    pub fn fill(&mut self, byte: u8) {
+        // SAFETY: ptr points to PAGE_SIZE bytes that this page owns, and `&mut self`
+        // means nothing else is using them while we write.
+        unsafe { self.ptr.as_ptr().write_bytes(byte, PAGE_SIZE) }
+    }
 }
 
 impl Drop for AlignedPage {
     fn drop(&mut self) {
-        // SAFETY: ptr came from alloc with exactly this layout, and drop runs once,
+        // SAFETY: ptr came from alloc_zeroed with exactly this layout, and drop runs once,
         // so the page is given back exactly once.
         unsafe { alloc::dealloc(self.ptr.as_ptr(), Self::layout()) }
     }
