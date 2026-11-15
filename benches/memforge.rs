@@ -98,5 +98,33 @@ fn engine(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, pages, reads, engine);
+fn recovery(c: &mut Criterion) {
+    let dir = fresh("recover");
+    let log = fresh("recover-base").join("base.log");
+    let mut db = Database::open(&dir).unwrap();
+    let mut base = Baseline::open(&log).unwrap();
+    for i in 0..100_000 {
+        let k = format!("user:{i}");
+        db.put(k.as_bytes(), VALUE).unwrap();
+        base.put(k.as_bytes(), VALUE).unwrap();
+    }
+    db.close().unwrap();
+    base.flush().unwrap();
+    let mut g = c.benchmark_group("reopen 100000 records");
+    g.sample_size(20);
+    g.bench_function("MEMFORGE recovery", |b| {
+        b.iter(|| black_box(Database::open(&dir).unwrap()))
+    });
+    g.bench_function("baseline replay", |b| {
+        b.iter(|| black_box(Baseline::open(&log).unwrap()))
+    });
+    assert_eq!(
+        Baseline::open(&log).unwrap().len(),
+        100_000,
+        "the replay found every record"
+    );
+    g.finish();
+}
+
+criterion_group!(benches, pages, reads, engine, recovery);
 criterion_main!(benches);
