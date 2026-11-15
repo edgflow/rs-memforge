@@ -169,3 +169,63 @@ impl SlottedPage {
         Ok(Self { page, header })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A sealed page's bytes, copied into a fresh page, as if read back from disk.
+    fn reopen(bytes: &[u8]) -> Result<SlottedPage, PageError> {
+        let mut fresh = AlignedPage::allocate();
+        fresh.view_mut().write(0, bytes).unwrap();
+        SlottedPage::open(fresh)
+    }
+
+    #[test]
+    fn records_survive_seal_and_open() {
+        let mut page = SlottedPage::new(1);
+        assert_eq!(page.insert(b"k1", b"v1"), Ok(0));
+        assert_eq!(page.insert(b"k2", b""), Ok(1));
+        let opened = reopen(page.seal()).unwrap();
+        assert_eq!(opened.get(0), Some((&b"k1"[..], &b"v1"[..])));
+        assert_eq!(
+            opened.get(1),
+            Some((&b"k2"[..], &b""[..])),
+            "an empty value is a value"
+        );
+        assert_eq!(opened.get(2), None);
+    }
+
+    #[test]
+    fn a_record_larger_than_any_page_is_refused() {
+        let mut page = SlottedPage::new(1);
+        let huge = vec![0u8; PAGE_SIZE];
+        assert_eq!(
+            page.insert(b"k", &huge),
+            Err(PageError::TooLarge { len: PAGE_SIZE + 1 })
+        );
+    }
+
+    #[test]
+    fn a_full_page_says_how_much_is_left() {
+        let mut page = SlottedPage::new(1);
+        let big = vec![7u8; 3000];
+        assert_eq!(page.insert(b"a", &big), Ok(0));
+        let free = page.free();
+        assert_eq!(page.insert(b"b", &big), Err(PageError::Full { needed: 3007, free }));
+    }
+
+    #[test]
+    fn any_changed_byte_is_detected() {
+        let mut page = SlottedPage::new(1);
+        page.insert(b"user:1001", b"Behrouz").unwrap();
+        let mut bytes = page.seal().to_vec();
+        bytes[4000] ^= 0x80; // free space: the checksum covers it too
+        assert!(matches!(reopen(&bytes), Err(PageError::ChecksumMismatch { .. })));
+    }
+
+    #[test]
+    fn bytes_that_are_not_a_page_are_refused() {
+        assert_eq!(reopen(&[0u8; PAGE_SIZE]).err(), Some(PageError::NotAPage));
+    }
+}
