@@ -1,13 +1,18 @@
 //! What `unsafe` changes in Rust, and what it does not.
 
 fn main() {
-    let mut page = [0u8; 8];
+    let record = [10u8, 20, 30, 40];
 
-    // Two mutable references to the same array, inside an unsafe block.
-    unsafe {
-        let a = &mut page;
-        let b = &mut page;
-        a[0] = 1;
-        b[0] = 2;
-    }
+    // get_unchecked skips the bounds check, so it is an unsafe function:
+    // its caller has to promise that the index is in bounds.
+    // SAFETY: 2 < 4, the length of `record`.
+    let third = unsafe { *record.get_unchecked(2) };
+    println!("get_unchecked(2) = {third}");
+
+    println!("byte_at(3)       = {}", byte_at(&record, 3));
+}
+
+/// Byte `i` of `bytes`.
+fn byte_at(bytes: &[u8], i: usize) -> u8 {
+    unsafe { *bytes.get_unchecked(i) }
 }

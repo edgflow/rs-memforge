@@ -8,6 +8,14 @@ edition = "2024"
 rust-version = "1.100"
 license = "MIT"
 
+# Every unsafe operation must be written out, even inside an unsafe fn,
+# and every unsafe block needs a SAFETY comment that says why it is correct.
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "warn"
+
 [package]
 name = "memforge"
 description = "MEMFORGE: a small persistent key-value storage engine in Rust"
@@ -19,3 +27,6 @@ license.workspace = true
 [dependencies]
 memforge-core = { path = "crates/memforge-core" }
 memforge-engine = { path = "crates/memforge-engine" }
+
+[lints]
+workspace = true
