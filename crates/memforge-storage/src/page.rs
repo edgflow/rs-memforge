@@ -1,6 +1,7 @@
 //! The page format. A header comes first; records grow from the header toward the end;
 //! the slot directory grows from the end toward the header; free space is in between.
 
+use crate::checksum::crc32;
 use crate::codec::{get_u16, get_u32, get_u64, put_u16, put_u32, put_u64};
 use crate::slot::{SLOT_SIZE, Slot};
 use memforge_memory::allocation::AlignedPage;
@@ -57,6 +58,12 @@ pub enum PageError {
     TooLarge { len: usize },
     /// The record does not fit in the free space that is left.
     Full { needed: usize, free: usize },
+    /// The bytes do not start with MAGIC: this is not a MEMFORGE page.
+    NotAPage,
+    /// A format version this code does not know.
+    UnknownVersion(u8),
+    /// The bytes changed after the page was sealed.
+    ChecksumMismatch { stored: u32, computed: u32 },
 }
 
 /// A page in the slotted format: header, records, free space, slot directory.
@@ -130,5 +137,35 @@ impl SlottedPage {
         let key = view.bytes(start, slot.key_len as usize)?;
         let value = view.bytes(start + key.len(), slot.value_len as usize)?;
         Some((key, value))
+    }
+
+    /// Writes the header, then a checksum over every other byte of the page into the
+    /// header's last four bytes, and returns the page's bytes, ready for disk.
+    pub fn seal(&mut self) -> &[u8] {
+        let mut head = [0u8; HEADER_SIZE];
+        self.header.encode(&mut head);
+        self.page.view_mut().write(0, &head).expect("the header fits");
+        let bytes = self.page.as_bytes();
+        self.header.checksum = crc32(&[&bytes[..20], &bytes[24..]]);
+        let checksum = self.header.checksum.to_le_bytes();
+        self.page.view_mut().write(20, &checksum).expect("the checksum fits");
+        self.page.as_bytes()
+    }
+
+    /// Opens a page read back from disk, after checking that it is one, and intact.
+    pub fn open(page: AlignedPage) -> Result<Self, PageError> {
+        let bytes = page.as_bytes();
+        let header = PageHeader::decode(bytes);
+        if header.magic != MAGIC {
+            return Err(PageError::NotAPage);
+        }
+        if header.version != VERSION {
+            return Err(PageError::UnknownVersion(header.version));
+        }
+        let computed = crc32(&[&bytes[..20], &bytes[24..]]);
+        if computed != header.checksum {
+            return Err(PageError::ChecksumMismatch { stored: header.checksum, computed });
+        }
+        Ok(Self { page, header })
     }
 }
