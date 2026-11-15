@@ -2,4 +2,5 @@
 //! contain unsafe code, and everything it offers to the layers above is safe.
 
 pub mod allocation;
+pub mod initialization;
 pub mod layout;
