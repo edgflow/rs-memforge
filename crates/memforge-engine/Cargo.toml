@@ -1,0 +1,10 @@
+[package]
+name = "memforge-engine"
+description = "MEMFORGE's database: open, put, get, delete, flush, close"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+memforge-core = { path = "../memforge-core" }
