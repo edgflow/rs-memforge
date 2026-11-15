@@ -16,6 +16,11 @@ fn main() {
             println!("cast:    {header:?}");
             println!("decoded: {:?}", PageHeader::decode(bytes));
         }
-        _ => eprintln!("usage: ch7_cast page"),
+        "offset-1" => {
+            // SAFETY: none. One byte in, the address is odd, and PageHeader needs 8.
+            let header = unsafe { &*(bytes.as_ptr().add(1) as *const PageHeader) };
+            println!("{header:?}");
+        }
+        _ => eprintln!("usage: ch7_cast page | offset-1"),
     }
 }
