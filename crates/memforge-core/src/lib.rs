@@ -3,5 +3,7 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
+pub mod record;
 
 pub use error::{Error, Result};
+pub use record::Record;
