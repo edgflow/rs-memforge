@@ -60,3 +60,31 @@ impl Drop for AlignedPage {
         unsafe { alloc::dealloc(self.ptr.as_ptr(), Self::layout()) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_new_page_is_aligned_and_zeroed() {
+        let page = AlignedPage::allocate();
+        assert_eq!(page.as_ptr().addr() % PAGE_ALIGN, 0);
+        assert!(page.as_bytes().iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn fill_and_writes_reach_every_byte() {
+        let mut page = AlignedPage::allocate();
+        page.fill(0xAB);
+        page.as_bytes_mut()[PAGE_SIZE - 1] = 7;
+        assert!(page.as_bytes()[..PAGE_SIZE - 1].iter().all(|&b| b == 0xAB));
+        assert_eq!(page.as_bytes()[PAGE_SIZE - 1], 7);
+    }
+
+    #[test]
+    fn the_page_layout_is_never_zero_sized() {
+        assert_eq!(AlignedPage::layout().size(), PAGE_SIZE);
+        assert_eq!(AlignedPage::layout().align(), PAGE_ALIGN);
+        assert_ne!(PAGE_SIZE, 0);
+    }
+}
