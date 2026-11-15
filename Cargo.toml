@@ -32,6 +32,11 @@ memforge-engine = { path = "crates/memforge-engine" }
 memforge-memory = { path = "crates/memforge-memory" }
 memforge-storage = { path = "crates/memforge-storage" }
 memforge-ffi = { path = "crates/memforge-ffi" }
+criterion = "0.8.2"
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "memforge"
+harness = false
