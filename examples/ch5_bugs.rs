@@ -1,4 +1,4 @@
-//! Three ways to break the rules of raw pointers. Run this only under Miri.
+//! Breaking the rules of raw pointers, and keeping them. Run this only under Miri.
 
 use memforge_memory::allocation::AlignedPage;
 use std::ptr;
@@ -18,6 +18,24 @@ fn main() {
             let far = unsafe { base.add(5000) };
             println!("{far:p}");
         }
-        _ => eprintln!("usage: ch5_bugs overlap | past-end"),
+        "two-mut" => {
+            // SAFETY: base points into the page, and nothing else uses that byte yet.
+            let a = unsafe { &mut *base };
+            // SAFETY: none. A second &mut to the same byte, while `a` is still to be used.
+            let b = unsafe { &mut *base };
+            *b = 2;
+            *a = 1; // the bug: `b` took the byte over, and `a` is no longer allowed in
+        }
+        "one-after-another" => {
+            // SAFETY: base points into the page, and each &mut is finished with before the
+            // next one is made: at any moment, only one of them is in use.
+            let a = unsafe { &mut *base };
+            *a = 1;
+            // SAFETY: as above; `a` is never used again.
+            let b = unsafe { &mut *base };
+            *b = 2;
+            println!("byte 0 = {}", page.as_bytes()[0]);
+        }
+        _ => eprintln!("usage: ch5_bugs overlap | past-end | two-mut | one-after-another"),
     }
 }
