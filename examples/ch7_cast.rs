@@ -3,6 +3,13 @@
 
 use memforge_storage::page::{PageHeader, SlottedPage};
 
+/// The same start as PageHeader, but with a flag stored as a bool where the version is.
+#[repr(C)]
+struct FlagHeader {
+    magic: [u8; 4],
+    sealed: bool,
+}
+
 fn main() {
     let case = std::env::args().nth(1).unwrap_or_default();
     let mut page = SlottedPage::new(7);
@@ -33,6 +40,14 @@ fn main() {
             let after = raw[5];
             println!("byte 5: {after}");
         }
-        _ => eprintln!("usage: ch7_cast page | offset-1 | as-bytes"),
+        "flag" => {
+            let mut damaged = bytes.to_vec();
+            damaged[4] = 2;
+            // SAFETY: none. A bool must be 0 or 1, and byte 4 is now 2.
+            let header = unsafe { &*(damaged.as_ptr() as *const FlagHeader) };
+            let sealed = header.sealed;
+            println!("{:?} sealed: {sealed}", header.magic);
+        }
+        _ => eprintln!("usage: ch7_cast page | offset-1 | as-bytes | flag"),
     }
 }
