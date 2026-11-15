@@ -23,4 +23,13 @@ fn main() {
     // A null pointer has address zero: it points at nothing. Making one is safe too.
     let null: *const u32 = std::ptr::null();
     println!("null  = {null:p}, is_null: {}", null.is_null());
+
+    // Pointer arithmetic: add(n) moves n elements of the pointer's type, not n bytes.
+    let record = [10u32, 20, 30, 40];
+    let first = record.as_ptr();
+    // SAFETY: index 2 is inside `record`, so the result stays inside the array.
+    let third = unsafe { first.add(2) };
+    println!("first = {first:p}, first.add(2) = {third:p}");
+    // SAFETY: `third` points at record[2], an initialized u32, and `record` is alive.
+    println!("*third = {}", unsafe { *third });
 }
