@@ -28,5 +28,8 @@ license.workspace = true
 memforge-core = { path = "crates/memforge-core" }
 memforge-engine = { path = "crates/memforge-engine" }
 
+[dev-dependencies]
+memforge-memory = { path = "crates/memforge-memory" }
+
 [lints]
 workspace = true

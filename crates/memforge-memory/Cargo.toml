@@ -1,0 +1,10 @@
+[package]
+name = "memforge-memory"
+description = "MEMFORGE's memory layer: pages of memory, and safe ways to use them"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true

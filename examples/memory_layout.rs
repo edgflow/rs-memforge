@@ -1,5 +1,7 @@
 //! Where MEMFORGE's bytes live: the stack, the heap, and their addresses.
 
+use memforge_memory::layout::{PAGE_ALIGN, PAGE_SIZE};
+
 fn main() {
     // A local variable lives on the stack, in main's own frame.
     let local = 42u32;
@@ -18,4 +20,12 @@ fn main() {
     println!("align_of u32 {}  u64 {}", align_of::<u32>(), align_of::<u64>());
     let words = [1u64, 2, 3];
     println!("three u64s at {:p} {:p} {:p}", &words[0], &words[1], &words[2]);
+
+    // The page from the top of main, and eleven more: how far is each from a boundary?
+    println!();
+    let mut pages = vec![page];
+    pages.extend((0..11).map(|_| vec![0u8; PAGE_SIZE]));
+    let offsets: Vec<usize> =
+        pages.iter().map(|p| p.as_ptr().addr() % PAGE_ALIGN).collect();
+    println!("page address % {PAGE_ALIGN}: {offsets:?}");
 }
