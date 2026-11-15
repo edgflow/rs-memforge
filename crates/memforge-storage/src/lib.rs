@@ -2,4 +2,5 @@
 //! views, and never needs unsafe code itself.
 #![forbid(unsafe_code)]
 
+pub mod codec;
 pub mod page;
