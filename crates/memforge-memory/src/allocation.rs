@@ -37,6 +37,20 @@ impl AlignedPage {
         // means nothing else is using them while we write.
         unsafe { self.ptr.as_ptr().write_bytes(byte, PAGE_SIZE) }
     }
+
+    /// The page's bytes, to read.
+    pub fn as_bytes(&self) -> &[u8] {
+        // SAFETY: ptr is not null, a u8 needs no alignment, all PAGE_SIZE bytes hold
+        // values (zeroed, and only ever written as bytes), they live as long as the page,
+        // and `&self` keeps anyone from writing them while this slice exists.
+        unsafe { std::slice::from_raw_parts(self.ptr.as_ptr(), PAGE_SIZE) }
+    }
+
+    /// The page's bytes, to write.
+    pub fn as_bytes_mut(&mut self) -> &mut [u8] {
+        // SAFETY: as in as_bytes, and `&mut self` makes this slice the only way in.
+        unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), PAGE_SIZE) }
+    }
 }
 
 impl Drop for AlignedPage {
