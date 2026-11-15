@@ -4,3 +4,4 @@
 
 pub mod codec;
 pub mod page;
+pub mod slot;
