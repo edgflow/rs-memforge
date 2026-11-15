@@ -92,6 +92,11 @@ impl SlottedPage {
         self.header.count
     }
 
+    /// The page's id: where it goes in the data file.
+    pub fn id(&self) -> u64 {
+        self.header.page_id
+    }
+
     /// The free bytes between the last record and the slot directory.
     pub fn free(&self) -> usize {
         let slots = self.header.count as usize * SLOT_SIZE;

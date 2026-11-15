@@ -9,3 +9,4 @@ pub mod index;
 pub mod recovery;
 
 pub use database::Database;
+pub use recovery::Recovery;
