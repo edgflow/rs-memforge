@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "memforge-core",
  "memforge-engine",
+ "memforge-ffi",
  "memforge-memory",
  "memforge-storage",
 ]
@@ -23,6 +24,14 @@ dependencies = [
  "memforge-core",
  "memforge-memory",
  "memforge-storage",
+]
+
+[[package]]
+name = "memforge-ffi"
+version = "0.1.0"
+dependencies = [
+ "memforge-core",
+ "memforge-engine",
 ]
 
 [[package]]

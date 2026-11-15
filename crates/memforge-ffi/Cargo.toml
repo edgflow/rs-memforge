@@ -1,0 +1,19 @@
+[package]
+name = "memforge-ffi"
+description = "MEMFORGE's C door: extern \"C\" functions, and memforge.h"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+# staticlib: a .a file that a C program links into itself.
+# rlib: so that Rust examples and tests can call it too.
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+memforge-core = { path = "../memforge-core" }
+memforge-engine = { path = "../memforge-engine" }
+
+[lints]
+workspace = true
