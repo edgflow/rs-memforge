@@ -15,6 +15,7 @@ pub const VERSION: u8 = 1;
 pub const HEADER_SIZE: usize = 24;
 
 /// A page header, decoded. repr(C) keeps the fields in this order, at C's offsets.
+/// Page bytes are decoded into it field by field, and never cast to it.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PageHeader {
@@ -31,7 +32,7 @@ impl PageHeader {
     pub fn encode(&self, out: &mut [u8]) {
         out[0..4].copy_from_slice(&self.magic);
         out[4] = self.version;
-        out[5..8].fill(0); // three unused bytes, always zero on disk
+        out[5..8].fill(0); // the three padding bytes, always zero on disk
         put_u64(out, 8, self.page_id);
         put_u16(out, 16, self.free_start);
         put_u16(out, 18, self.count);
@@ -227,5 +228,30 @@ mod tests {
     #[test]
     fn bytes_that_are_not_a_page_are_refused() {
         assert_eq!(reopen(&[0u8; PAGE_SIZE]).err(), Some(PageError::NotAPage));
+    }
+
+    #[test]
+    fn the_header_is_little_endian_on_every_machine() {
+        let header = PageHeader {
+            magic: MAGIC,
+            version: VERSION,
+            page_id: 0x0102_0304_0506_0708,
+            free_start: 0x090A,
+            count: 0x0B0C,
+            checksum: 0x0D0E_0F10,
+        };
+        let mut out = [0xFF; HEADER_SIZE];
+        header.encode(&mut out);
+        assert_eq!(out[5..8], [0, 0, 0], "padding is written as zero");
+        assert_eq!(out[8..16], [8, 7, 6, 5, 4, 3, 2, 1], "page_id, smallest byte first");
+        assert_eq!(PageHeader::decode(&out), header);
+    }
+
+    #[test]
+    fn a_damaged_version_byte_is_an_error() {
+        let mut page = SlottedPage::new(1);
+        let mut bytes = page.seal().to_vec();
+        bytes[4] = 2;
+        assert_eq!(reopen(&bytes).err(), Some(PageError::UnknownVersion(2)));
     }
 }
