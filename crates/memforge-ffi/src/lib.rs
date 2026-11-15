@@ -184,3 +184,14 @@ pub unsafe extern "C" fn mf_close(db: *mut Database) -> c_int {
         }
     })
 }
+
+/// Panics inside MEMFORGE, to show what a panic does at the boundary. Guarded (non-zero),
+/// it returns MF_PANIC; unguarded, the process aborts.
+#[unsafe(no_mangle)]
+pub extern "C" fn mf_demo_panic(guarded: c_int) -> c_int {
+    if guarded != 0 {
+        guard(|| panic!("a bug inside MEMFORGE"))
+    } else {
+        panic!("a bug inside MEMFORGE")
+    }
+}
