@@ -21,6 +21,8 @@ name = "memforge-engine"
 version = "0.1.0"
 dependencies = [
  "memforge-core",
+ "memforge-memory",
+ "memforge-storage",
 ]
 
 [[package]]

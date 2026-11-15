@@ -3,5 +3,6 @@
 #![forbid(unsafe_code)]
 
 mod database;
+pub mod entry;
 
 pub use database::Database;

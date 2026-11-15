@@ -8,6 +8,8 @@ license.workspace = true
 
 [dependencies]
 memforge-core = { path = "../memforge-core" }
+memforge-memory = { path = "../memforge-memory" }
+memforge-storage = { path = "../memforge-storage" }
 
 [lints]
 workspace = true
