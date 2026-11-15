@@ -21,6 +21,18 @@ fn main() {
             let header = unsafe { &*(bytes.as_ptr().add(1) as *const PageHeader) };
             println!("{header:?}");
         }
-        _ => eprintln!("usage: ch7_cast page | offset-1"),
+        "as-bytes" => {
+            let header = PageHeader::decode(bytes);
+            let size = size_of::<PageHeader>();
+            let start = &header as *const PageHeader as *const u8;
+            // SAFETY: none. The 24 bytes of a PageHeader include 3 bytes of padding,
+            // and padding is never initialized.
+            let raw = unsafe { std::slice::from_raw_parts(start, size) };
+            let version = raw[4];
+            println!("byte 4: {version}");
+            let after = raw[5];
+            println!("byte 5: {after}");
+        }
+        _ => eprintln!("usage: ch7_cast page | offset-1 | as-bytes"),
     }
 }
