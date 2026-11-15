@@ -12,7 +12,9 @@ fn main() {
     println!("byte_at(3)       = {}", byte_at(&record, 3));
 }
 
-/// Byte `i` of `bytes`.
+/// Byte `i` of `bytes`. Panics if `i` is out of bounds.
 fn byte_at(bytes: &[u8], i: usize) -> u8 {
+    assert!(i < bytes.len(), "byte {i} is out of bounds");
+    // SAFETY: the assert above guarantees that i < bytes.len().
     unsafe { *bytes.get_unchecked(i) }
 }
