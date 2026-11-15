@@ -1,0 +1,13 @@
+[package]
+name = "memforge-storage"
+description = "MEMFORGE's page format: header, records, slots, checksums"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+memforge-memory = { path = "../memforge-memory" }
+
+[lints]
+workspace = true

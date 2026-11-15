@@ -30,6 +30,7 @@ memforge-engine = { path = "crates/memforge-engine" }
 
 [dev-dependencies]
 memforge-memory = { path = "crates/memforge-memory" }
+memforge-storage = { path = "crates/memforge-storage" }
 
 [lints]
 workspace = true
