@@ -15,6 +15,6 @@ fn main() {
     println!("{} = {}", String::from_utf8_lossy(key), String::from_utf8_lossy(value));
     println!("outside the page: {:?}", view.bytes(4090, 14));
 
-    drop(page);
-    println!("after the page is gone: {}", String::from_utf8_lossy(key));
+    println!("still borrowed, still there: {}", String::from_utf8_lossy(key));
+    drop(page); // fine now: nothing borrows the page any more
 }
