@@ -47,11 +47,18 @@ Rust cannot check what a C caller passes in. Each function checks what it can, a
 
 - Every `add` stays inside its page, or one past its end, after a range check.
 - `page_start` changes only the address, with `map_addr`. No pointer is ever made from an
-  integer, and every test runs under strict provenance:
-  `MIRIFLAGS=-Zmiri-strict-provenance cargo miri test --workspace --lib`.
+  integer, and every test runs under strict provenance, in `scripts/miri.sh`.
 
 ## Examples that break the rules on purpose
 
 `ch2_miri`, `ch3_contract`, `ch4_zeroed`, `ch4_counters`, `ch5_bugs`, `ch7_cast`,
-`ch8_provenance` and `ch10_handles` say `SAFETY: none` where they break a rule. They run
-only under Miri, which stops at the bug and explains it.
+`ch8_provenance`, `ch10_handles`, `ch11_limits` and `ch11_race` say `SAFETY: none` where
+they break a rule. They run only under Miri, which stops at the bug and explains it.
+
+## How it is checked
+
+`scripts/check.sh` runs the tests, then `scripts/miri.sh` (every library and test under
+Miri, with file I/O allowed and strict provenance), then `scripts/asan.sh` (the C client
+with AddressSanitizer). On macOS, MemorySanitizer and LeakSanitizer are not supported, so
+uninitialized memory and Rust-side leaks are Miri's job. ThreadSanitizer needs
+`-Zbuild-std`, and MEMFORGE shares no mutable state between threads.
