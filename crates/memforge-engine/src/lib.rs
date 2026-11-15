@@ -6,5 +6,6 @@ mod database;
 pub mod datafile;
 pub mod entry;
 pub mod index;
+pub mod recovery;
 
 pub use database::Database;
