@@ -17,10 +17,10 @@ int main(int argc, char **argv) {
     printf("put:   %d\n", mf_put(db, k, strlen(key), v, strlen(value)));
 
     if (argc > 1 && strcmp(argv[1], "small-buffer") == 0) {
-        /* A bug planted on purpose: a 4-byte buffer, passed as if it held 64. */
+        /* Fixed: the buffer's real size, so MEMFORGE can refuse what does not fit. */
         uint8_t *small = malloc(4);
         size_t n = 0;
-        printf("get into 4 heap bytes: %d\n", mf_get(db, k, strlen(key), small, 64, &n));
+        printf("get into 4 heap bytes: %d\n", mf_get(db, k, strlen(key), small, 4, &n));
         free(small);
         return mf_close(db);
     }
