@@ -10,6 +10,15 @@ fn main() {
     println!("get_unchecked(2) = {third}");
 
     println!("byte_at(3)       = {}", byte_at(&record, 3));
+
+    // The two mutable references from before, as a safe API: two halves that can't overlap.
+    let mut page = [0u8; 8];
+    let (a, b) = page.split_at_mut(4);
+    a[0] = 1;
+    b[0] = 2;
+    println!("page             = {page:?}");
+
+    println!("byte_at(9)       = {}", byte_at(&record, 9));
 }
 
 /// Byte `i` of `bytes`. Panics if `i` is out of bounds.
