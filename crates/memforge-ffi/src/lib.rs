@@ -33,6 +33,26 @@ fn guard(f: impl FnOnce() -> c_int) -> c_int {
     panic::catch_unwind(AssertUnwindSafe(f)).unwrap_or(MF_PANIC)
 }
 
+/// The `len` bytes at `ptr`, borrowed for the length of a call.
+///
+/// # Safety
+/// If `len` is not zero, `ptr` must point to `len` readable bytes that nothing changes
+/// while the returned slice is in use.
+unsafe fn bytes<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], c_int> {
+    if len == 0 {
+        return Ok(&[]);
+    }
+    if ptr.is_null() {
+        return Err(MF_NULL);
+    }
+    if len > isize::MAX as usize {
+        return Err(MF_BAD_LENGTH);
+    }
+    // SAFETY: ptr is not null, a u8 needs no alignment, len fits in an isize, and the
+    // caller promises len readable bytes that stay unchanged.
+    Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
+}
+
 /// Opens the database in the directory `dir`, and stores its handle in `*out`.
 ///
 /// # Safety
@@ -51,6 +71,95 @@ pub unsafe extern "C" fn mf_open(dir: *const c_char, out: *mut *mut Database) ->
                 unsafe { out.write(Box::into_raw(Box::new(db))) };
                 MF_OK
             }
+            Err(e) => code(&e),
+        }
+    })
+}
+
+/// Stores `value` under `key`.
+///
+/// # Safety
+/// `db` must come from `mf_open` and not be closed. `key` and `value` must point to
+/// `key_len` and `value_len` readable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn mf_put(
+    db: *mut Database,
+    key: *const u8,
+    key_len: usize,
+    value: *const u8,
+    value_len: usize,
+) -> c_int {
+    guard(|| {
+        // SAFETY: the caller promises that db came from mf_open, is not closed, and is not
+        // used by anyone else during this call.
+        let Some(db) = (unsafe { db.as_mut() }) else {
+            return MF_NULL;
+        };
+        // SAFETY: the caller promises key_len readable bytes at key.
+        let key = match unsafe { bytes(key, key_len) } {
+            Ok(key) => key,
+            Err(code) => return code,
+        };
+        // SAFETY: the caller promises value_len readable bytes at value.
+        let value = match unsafe { bytes(value, value_len) } {
+            Ok(value) => value,
+            Err(code) => return code,
+        };
+        match db.put(key, value) {
+            Ok(()) => MF_OK,
+            Err(e) => code(&e),
+        }
+    })
+}
+
+/// Copies `key`'s value into `buf`, and its length into `*value_len`, even when `buf` is
+/// too small for it.
+///
+/// # Safety
+/// `db` must come from `mf_open` and not be closed. `key` must point to `key_len` readable
+/// bytes, `buf` to `buf_len` writable bytes, and `value_len` to a writable size_t.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn mf_get(
+    db: *const Database,
+    key: *const u8,
+    key_len: usize,
+    buf: *mut u8,
+    buf_len: usize,
+    value_len: *mut usize,
+) -> c_int {
+    guard(|| {
+        // SAFETY: the caller promises that db came from mf_open and is not closed.
+        let Some(db) = (unsafe { db.as_ref() }) else {
+            return MF_NULL;
+        };
+        if value_len.is_null() {
+            return MF_NULL;
+        }
+        // SAFETY: the caller promises key_len readable bytes at key.
+        let key = match unsafe { bytes(key, key_len) } {
+            Ok(key) => key,
+            Err(code) => return code,
+        };
+        let copied = db.get_with(key, |value| {
+            // SAFETY: value_len is not null, and the caller promises it is writable.
+            unsafe { value_len.write(value.len()) };
+            if value.len() > buf_len {
+                return MF_BUFFER_TOO_SMALL;
+            }
+            if value.is_empty() {
+                return MF_OK;
+            }
+            if buf.is_null() {
+                return MF_NULL;
+            }
+            // SAFETY: buf is not null, the caller promises buf_len writable bytes, the
+            // value fits in them, and a C buffer cannot overlap a page MEMFORGE owns.
+            unsafe { std::ptr::copy_nonoverlapping(value.as_ptr(), buf, value.len()) };
+            MF_OK
+        });
+        match copied {
+            Ok(Some(code)) => code,
+            Ok(None) => MF_NOT_FOUND,
             Err(e) => code(&e),
         }
     })
