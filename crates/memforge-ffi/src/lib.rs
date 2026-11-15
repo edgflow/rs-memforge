@@ -195,3 +195,68 @@ pub extern "C" fn mf_demo_panic(guarded: c_int) -> c_int {
         panic!("a bug inside MEMFORGE")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
+    use std::ptr;
+
+    /// A database opened through the C door, in a fresh directory.
+    fn open(name: &str) -> *mut Database {
+        let dir = std::env::temp_dir().join("memforge-ffi-tests").join(name);
+        let _ = std::fs::remove_dir_all(&dir); // it may not exist yet
+        let dir = CString::new(dir.as_os_str().as_bytes()).unwrap();
+        let mut db = ptr::null_mut();
+        // SAFETY: dir is a NUL-terminated string, and db is a writable pointer.
+        assert_eq!(unsafe { mf_open(dir.as_ptr(), &mut db) }, MF_OK);
+        db
+    }
+
+    #[test]
+    fn null_pointers_are_refused() {
+        let db = open("null");
+        let (k, v) = (b"k".as_ptr(), b"v".as_ptr());
+        // SAFETY: each pointer is null, or valid for the length given with it; the C door
+        // must refuse the nulls, not follow them.
+        unsafe {
+            assert_eq!(mf_open(ptr::null(), ptr::null_mut()), MF_NULL);
+            assert_eq!(mf_put(ptr::null_mut(), k, 1, v, 1), MF_NULL);
+            assert_eq!(mf_put(db, ptr::null(), 1, v, 1), MF_NULL);
+            assert_eq!(mf_close(ptr::null_mut()), MF_NULL);
+            assert_eq!(mf_close(db), MF_OK);
+        }
+    }
+
+    #[test]
+    fn a_length_no_slice_can_have_is_refused() {
+        let db = open("length");
+        // SAFETY: db came from mf_open; the key's length is refused before it is used.
+        unsafe {
+            let code = mf_put(db, b"k".as_ptr(), usize::MAX, b"v".as_ptr(), 1);
+            assert_eq!(code, MF_BAD_LENGTH);
+            assert_eq!(mf_close(db), MF_OK);
+        }
+    }
+
+    #[test]
+    fn get_says_how_large_the_buffer_must_be() {
+        let db = open("buffer");
+        let (mut buf, mut len) = ([0u8; 4], 0);
+        // SAFETY: db came from mf_open, every key and value is valid for its length, buf
+        // has 4 writable bytes, and len is writable.
+        unsafe {
+            assert_eq!(mf_put(db, b"k".as_ptr(), 1, b"Behrouz".as_ptr(), 7), MF_OK);
+            let code = mf_get(db, b"k".as_ptr(), 1, buf.as_mut_ptr(), 4, &mut len);
+            assert_eq!((code, len), (MF_BUFFER_TOO_SMALL, 7));
+            let code = mf_get(db, b"x".as_ptr(), 1, buf.as_mut_ptr(), 4, &mut len);
+            assert_eq!(code, MF_NOT_FOUND);
+            assert_eq!(mf_close(db), MF_OK);
+        }
+    }
+
+    #[test]
+    fn a_panic_becomes_an_error_code() {
+        assert_eq!(mf_demo_panic(1), MF_PANIC);
+    }
+}
