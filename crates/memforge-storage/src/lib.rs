@@ -2,6 +2,7 @@
 //! views, and never needs unsafe code itself.
 #![forbid(unsafe_code)]
 
+pub mod checksum;
 pub mod codec;
 pub mod page;
 pub mod slot;
