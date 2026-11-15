@@ -32,3 +32,41 @@ impl<'a> PageView<'a> {
         Some(unsafe { std::slice::from_raw_parts(self.base.as_ptr().add(offset), len) })
     }
 }
+
+/// A range of bytes that does not fit inside a page.
+#[derive(Debug, PartialEq, Eq)]
+pub struct OutOfPage {
+    pub offset: usize,
+    pub len: usize,
+}
+
+/// A writable view of a page. While it lives, it is the only way into the page's bytes.
+pub struct PageViewMut<'a> {
+    base: NonNull<u8>,
+    _bytes: PhantomData<&'a mut [u8]>,
+}
+
+impl AlignedPage {
+    /// A writable view of this page, borrowed mutably from it.
+    pub fn view_mut(&mut self) -> PageViewMut<'_> {
+        PageViewMut { base: self.non_null(), _bytes: PhantomData }
+    }
+}
+
+impl PageViewMut<'_> {
+    /// Copies `data` into the page at `offset`, or refuses if it would not fit.
+    pub fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), OutOfPage> {
+        let fits = offset.checked_add(data.len()).is_some_and(|end| end <= PAGE_SIZE);
+        if !fits {
+            return Err(OutOfPage { offset, len: data.len() });
+        }
+        let dst = self.base.as_ptr();
+        // SAFETY: offset..offset + len lies inside the page (checked above). `data` cannot
+        // overlap it: the view borrows the page mutably, so no other reference into it,
+        // `data` included, can exist while the view lives.
+        unsafe {
+            std::ptr::copy_nonoverlapping(data.as_ptr(), dst.add(offset), data.len())
+        };
+        Ok(())
+    }
+}
