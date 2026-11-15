@@ -53,6 +53,11 @@ impl AlignedPage {
     }
 }
 
+// SAFETY: an AlignedPage is the only owner of its memory, like a Box<[u8]>. No other
+// pointer to that memory survives outside the page's own methods, so moving the page to
+// another thread moves the one and only owner, and its Drop runs there, once.
+unsafe impl Send for AlignedPage {}
+
 impl Drop for AlignedPage {
     fn drop(&mut self) {
         // SAFETY: ptr came from alloc_zeroed with exactly this layout, and drop runs once,
