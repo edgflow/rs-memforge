@@ -4,5 +4,6 @@
 
 mod database;
 pub mod entry;
+pub mod index;
 
 pub use database::Database;
