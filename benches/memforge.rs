@@ -23,5 +23,13 @@ fn pages(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, pages);
+fn reads(c: &mut Criterion) {
+    let page = AlignedPage::allocate();
+    let mut g = c.benchmark_group("read 64 bytes");
+    g.bench_function("slice", |b| b.iter(|| black_box(&page.as_bytes()[1234..1298])));
+    g.bench_function("PageView", |b| b.iter(|| black_box(page.view().bytes(1234, 64))));
+    g.finish();
+}
+
+criterion_group!(benches, pages, reads);
 criterion_main!(benches);
