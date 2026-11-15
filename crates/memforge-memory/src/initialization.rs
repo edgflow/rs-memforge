@@ -46,6 +46,17 @@ impl<T, const N: usize> Batch<T, N> {
         // SAFETY: index < len, and the invariant says items[..len] hold valid values.
         Some(unsafe { self.items[index].assume_init_ref() })
     }
+
+    /// Removes the last value and hands it over.
+    pub fn pop(&mut self) -> Option<T> {
+        if self.len == 0 {
+            return None;
+        }
+        self.len -= 1;
+        // SAFETY: items[len] held a valid value. len was lowered first, so the batch no
+        // longer counts it: from here on it belongs to the caller, and is dropped once.
+        Some(unsafe { self.items[self.len].assume_init_read() })
+    }
 }
 
 impl<T, const N: usize> Default for Batch<T, N> {
