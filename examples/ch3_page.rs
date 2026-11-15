@@ -16,4 +16,14 @@ fn main() {
     let bytes = page.as_bytes();
     println!("first 8 bytes: {:02x?}", &bytes[..8]);
     println!("last byte:     {:#04x} (of {PAGE_SIZE})", bytes[PAGE_SIZE - 1]);
+
+    // A page filled on another thread, then handed back.
+    let mut fresh = AlignedPage::allocate();
+    let filled = std::thread::spawn(move || {
+        fresh.fill(0x5A);
+        fresh
+    })
+    .join()
+    .unwrap();
+    println!("filled on another thread: {:#04x}", filled.as_bytes()[0]);
 }
