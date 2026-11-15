@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.put(b"user:1001", b"Behrouz")?;
     db.put(b"user:1002", b"Rust Developer")?;
 
-    let value = db.get(b"user:1001")?;
+    let value = db.get(b"user:1001")?.map(|v| String::from_utf8_lossy(&v).into_owned());
     println!("{value:?}");
 
     db.flush()?;
