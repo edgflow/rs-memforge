@@ -31,6 +31,11 @@ impl AlignedPage {
         self.ptr.as_ptr()
     }
 
+    /// Where the page starts, to write through.
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.ptr.as_ptr()
+    }
+
     /// Sets every byte of the page to `byte`.
     pub fn fill(&mut self, byte: u8) {
         // SAFETY: ptr points to PAGE_SIZE bytes that this page owns, and `&mut self`
