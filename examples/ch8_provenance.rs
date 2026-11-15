@@ -26,6 +26,15 @@ fn main() {
             let byte = unsafe { start.read() };
             println!("first byte: {byte:#x}");
         }
-        _ => eprintln!("usage: ch8_provenance same-address|int-cast"),
+        "map-addr" => {
+            // SAFETY: 1234 is inside page a.
+            let record = unsafe { a.as_ptr().add(1234) };
+            let start = record.map_addr(|addr| addr & !(PAGE_SIZE - 1));
+            // SAFETY: start keeps record's permission for page a, and it points to the
+            // page's first byte.
+            let byte = unsafe { start.read() };
+            println!("first byte: {byte:#x}, same as the page: {}", start == a.as_ptr());
+        }
+        _ => eprintln!("usage: ch8_provenance same-address|int-cast|map-addr"),
     }
 }
