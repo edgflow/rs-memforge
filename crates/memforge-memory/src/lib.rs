@@ -4,3 +4,4 @@
 pub mod allocation;
 pub mod initialization;
 pub mod layout;
+pub mod pointer;

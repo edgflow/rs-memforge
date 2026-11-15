@@ -36,6 +36,11 @@ impl AlignedPage {
         self.ptr.as_ptr()
     }
 
+    /// The page's pointer, for the views in this crate.
+    pub(crate) fn non_null(&self) -> NonNull<u8> {
+        self.ptr
+    }
+
     /// Sets every byte of the page to `byte`.
     pub fn fill(&mut self, byte: u8) {
         // SAFETY: ptr points to PAGE_SIZE bytes that this page owns, and `&mut self`
