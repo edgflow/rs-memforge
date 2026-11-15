@@ -11,4 +11,11 @@ fn main() {
     println!("page (Vec)  stack  {:p}  {} bytes", &page, size_of_val(&page));
     println!("*boxed      heap   {:p}", &*boxed);
     println!("page data   heap   {:p}  {} bytes", page.as_ptr(), page.len());
+
+    // Alignment: a value of a type must start at a multiple of the type's alignment.
+    println!();
+    println!("align_of  u8 {}  u16 {}", align_of::<u8>(), align_of::<u16>());
+    println!("align_of u32 {}  u64 {}", align_of::<u32>(), align_of::<u64>());
+    let words = [1u64, 2, 3];
+    println!("three u64s at {:p} {:p} {:p}", &words[0], &words[1], &words[2]);
 }
